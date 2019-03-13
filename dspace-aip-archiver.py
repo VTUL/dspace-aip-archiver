@@ -6,6 +6,18 @@
     records to call DSpace AIP export tool.  Serializes AIP packages to specified
     location.
 
+    Configuration file:
+    Copy configuration file stub to dspace-aip-archiver.config.local
+    Edit to reflect needs.  E.g.:
+    [DEFAULT]
+    OAI_URL = https://vtechworks.lib.vt.edu/oai/request?
+    OAI_REQUEST = request?verb=ListRecords&metadataPrefix=oai_dc&from=
+    DAYS = 1
+    STORAGE_LOCATION = /tmp/dspace-export
+
+    This configuration will export all VTechWorks items which have been deposited or changed in the last day
+    to a dspace-export directory in /tmp
+
     TODO: Should use REST API when available.
 """
 
