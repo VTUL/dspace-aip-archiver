@@ -12,7 +12,7 @@ Clone or download this project.  Copy the configuration file to .local and edit.
 
 ### Prerequisites
 
-You'll need pyoai https://github.com/infrae/pyoai
+You'll need [pyoai](https://github.com/infrae/pyoai)
 
 pip install pyoai
 
