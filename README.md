@@ -1,4 +1,4 @@
-# dspace AIP archiver
+# DSpace AIP archiver
 
 Use OAI-PMH interface to find items that have been created or changed in
 defined time period and export those as Archival Information Packages.  AIPs 
