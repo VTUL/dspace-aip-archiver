@@ -19,6 +19,11 @@ pip install pyoai
 
 ### Installing
 
+```
+git clone git@github.com:VTUL/dspace-aip-archiver.git
+./Makefile
+```
+
 Run script from anywhere, but config.local file is expected in same 
 directory.
 

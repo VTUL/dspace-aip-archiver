@@ -62,14 +62,26 @@ def get_identifiers(records):
     """Return DSpace item identifiers"""
     ids = []
     for record in records:
-        print(record[1].getField("identifier"))  # TODO: Not complete.  Get handles.
+        if record[1]:
+            rec = record[1].getField("identifier")
+            ids.append(get_handle(rec))
+    return ids
+
+def get_handle(record):
+    handleid = ""
+    for r in record:
+        if "handle" in r:
+           handleid = r.replace("http://hdl.handle.net/","")
+    return handleid
 
 
 if __name__ == "__main__":
     oai_url, oai_request, days, storage_location = get_config()
     date = request_date(days)
     records = get_records(oai_url, date)
-    get_identifiers(records)
+    ids = get_identifiers(records)
+    for id in ids:
+       print(id)
 
 
 
