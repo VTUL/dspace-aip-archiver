@@ -14,11 +14,11 @@
     OAI_REQUEST = request?verb=ListRecords&metadataPrefix=oai_dc&from=
     DAYS = 1
     STORAGE_LOCATION = /tmp/dspace-export
+    DSPACE_CLI = /dspace/bin/dspace
+    DSPACE_EPERSON = <user>@organization.tld
 
     This configuration will export all VTechWorks items which have been deposited or changed in the last day
     to a dspace-export directory in /tmp
-
-    TODO: Should use REST API when available.
 """
 
 
@@ -29,6 +29,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from oaipmh.client import Client
 from oaipmh.metadata import MetadataRegistry, oai_dc_reader
+from subprocess import run
 
 
 def get_config():
@@ -37,7 +38,8 @@ def get_config():
         config = configparser.ConfigParser()
         config.read(join(getcwd(), "dspace-aip-archiver.config.local"))
         return config["DEFAULT"]["OAI_URL"], config["DEFAULT"]["OAI_REQUEST"], int(config["DEFAULT"]["DAYS"]), \
-               config["DEFAULT"]["STORAGE_LOCATION"]
+               config["DEFAULT"]["STORAGE_LOCATION"], config["DEFAULT"]["DSPACE_CLI"], \
+               config["DEFAULT"]["DSPACE_EPERSON"]
     else:
         print("Did not find {}".format(join(getcwd(), "dspace-aip-archiver.config.local")))
         exit()
@@ -67,21 +69,33 @@ def get_identifiers(records):
             ids.append(get_handle(rec))
     return ids
 
+
 def get_handle(record):
+    """Strip out handle ids from list of new and changed records"""
     handleid = ""
     for r in record:
         if "handle" in r:
-           handleid = r.replace("http://hdl.handle.net/","")
+            handleid = r.replace("http://hdl.handle.net/","")
     return handleid
 
 
+def export_aip(handle, cli, eperson, storage):
+    """Call DSpace CLI to export AIPs to storage_location"""
+    eperson = "-e " + eperson
+    item = "-i " + handle
+    file_name = handle.replace("/", "-") + ".zip"
+    destination = join(storage, file_name)
+    run([cli, "packager", "-d", "-t AIP", eperson, item, destination])
+
+
 if __name__ == "__main__":
-    oai_url, oai_request, days, storage_location = get_config()
+    oai_url, oai_request, days, storage_location, dspace_cli, dspace_eperson = get_config()
     date = request_date(days)
     records = get_records(oai_url, date)
     ids = get_identifiers(records)
     for id in ids:
-       print(id)
+        export_aip(id, dspace_cli, dspace_eperson, storage_location)
+
 
 
 
