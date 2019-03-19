@@ -1,3 +1,3 @@
 pip install -r requirements.txt
 
-#nosetests tests
+nosetests tests
