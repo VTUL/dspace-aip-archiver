@@ -2,7 +2,7 @@
 
 Use OAI-PMH interface to find items that have been created or changed in
 defined time period and export those as Archival Information Packages.  AIPs 
-may then be preserved external to DSPace.
+may then be preserved external to DSpace.
 
 
 ## Getting Started
