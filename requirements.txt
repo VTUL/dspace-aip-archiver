@@ -1,7 +1,12 @@
-pyoai
 autopep8
-nose
-cryptography
+awscli
+bagit
+boto3
 coverage
+cryptography
+noid-mint
+nose
+pyoai
 pytest==4.3.0
 pytest-cov
+pyyaml
