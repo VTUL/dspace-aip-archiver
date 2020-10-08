@@ -103,11 +103,11 @@ def getRecordsWithValues(oaiRecords):
 def exportAipFromDSpaceToStorageFolder(handle, configData):
 
     cli = configData["dspace"]["DSPACE_CLI"]
-    eperson = "-e " + configData["dspace"]["DSPACE_EPERSON"]
-    item = "-i " + handle
+    eperson = configData["dspace"]["DSPACE_EPERSON"]
+    item = handle
     file_name = handle.replace("/", "-") + ".zip"
     destination = join(configData["dspace"]["EXPORT_LOCATION"], file_name)
-    run([cli, "packager", "-d", "-t AIP", eperson, item, destination])
+    run([cli, "packager", "-d", "-t", "AIP", "-e", eperson, "-i", item, destination])
 
 
 def unZipFile(fileName, sourceFilePath):
