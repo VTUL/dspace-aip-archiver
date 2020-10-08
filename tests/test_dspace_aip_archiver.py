@@ -1,5 +1,10 @@
-from unittest import TestCase
+import os
+import tarfile
+import tempfile
+import zipfile
+
 from dspace_aip_archiver import *
+from unittest import TestCase
 
 
 class TestSuite(TestCase):
@@ -83,3 +88,87 @@ class TestSuite(TestCase):
         testOAIRecords = []
         outputRecords = getRecordsWithValues(testOAIRecords)
         self.assertEqual(outputRecords, [])
+
+    def test_createTarFile(self):
+
+        # Prepare files in the source folder
+        testFile1 = "test1.txt"
+        testFile2 = "test2.txt"
+        content = "content2"
+        tempPath = tempfile.TemporaryDirectory().name
+        sourceFolder = tempfile.mkdtemp()
+        sourceFolderPath = sourceFolder + "/"
+
+        saveToTargetFile(testFile1, content, sourceFolderPath)
+        saveToTargetFile(testFile2, content, sourceFolderPath)
+
+        # Create a test tar file in the target folder
+        targetFolder = tempfile.mkdtemp()
+        targetFolderPath = targetFolder + "/"
+        fileName = "test.tar"
+        createTarFile(fileName, sourceFolderPath, targetFolderPath)
+
+        self.assertTrue(tarfile.is_tarfile(targetFolderPath + fileName))
+
+        # Untar tarfile
+        validateFolder = tempfile.mkdtemp()
+        validateFolderPath = targetFolder + "/"
+        tarTempFile = tarfile.open(targetFolderPath + fileName)
+        tarTempFile.extractall(validateFolderPath)
+        targetFolderFiles = os.listdir(validateFolderPath)
+        expected = ['test.tar', 'test1.txt', 'test2.txt']
+
+        self.assertListEqual(targetFolderFiles, expected)
+
+    def test_saveToTargetFile(self):
+
+        fileName = "test.txt"
+        content = "content"
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tempPath = tmpdirname
+            saveToTargetFile(fileName, content, tempPath)
+
+            f = open(tmpdirname + fileName, "r")
+            self.assertEqual(f.read(), "content")
+
+    def test_createBagit(self):
+
+        # Prepare files in the source folder
+        testFile1 = "test1.txt"
+        testFile2 = "test2.txt"
+        content = "content2"
+        tempPath = tempfile.TemporaryDirectory().name
+        sourceFolder = tempfile.mkdtemp()
+        sourceFolderPath = sourceFolder + "/"
+
+        saveToTargetFile(testFile1, content, sourceFolderPath)
+        saveToTargetFile(testFile2, content, sourceFolderPath)
+
+        testConfigData = {
+            'aptrust': {
+                'organization': 'VT',
+                'group_id': '12345',
+                'desc': 'Desc'}}
+        testNoid = "zxcvb"
+        testfileCount = [1, 1]
+
+        bagitInfo = createBagitInfo(testConfigData, testNoid, testfileCount)
+        checksum = ["md5", "sha256"]
+
+        createBagit(sourceFolderPath, bagitInfo, checksum)
+
+        sourceFolderFiles = os.listdir(sourceFolderPath)
+        expected = [
+            'tagmanifest-md5.txt',
+            'bagit.txt',
+            'bag-info.txt',
+            'tagmanifest-sha256.txt',
+            'manifest-md5.txt',
+            'data',
+            'manifest-sha256.txt']
+        self.assertListEqual(sourceFolderFiles, expected)
+
+        sourceFolderDataFiles = os.listdir(sourceFolderPath + "data/")
+        expected = ['test1.txt', 'test2.txt']
+        self.assertListEqual(sourceFolderDataFiles, expected)

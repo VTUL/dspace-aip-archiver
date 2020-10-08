@@ -22,6 +22,7 @@ from pathlib import Path
 from sqlite3 import Error
 from subprocess import run
 from time import strftime
+from zipfile import ZipFile
 
 
 class ProgressPercentage(object):
@@ -102,11 +103,19 @@ def getRecordsWithValues(oaiRecords):
 def exportAipFromDSpaceToStorageFolder(handle, configData):
 
     cli = configData["dspace"]["DSPACE_CLI"]
-    eperson = "-e " + configData["dspace"]["DSPACE_EPERSON"]
-    item = "-i " + handle
-    file_name = handle.replace("/", "-") + ".tar"
+    eperson = configData["dspace"]["DSPACE_EPERSON"]
+    item = handle
+    file_name = handle.replace("/", "-") + ".zip"
     destination = join(configData["dspace"]["EXPORT_LOCATION"], file_name)
-    run([cli, "packager", "-d", "-t AIP", eperson, item, destination])
+    run([cli, "packager", "-d", "-t", "AIP", "-e", eperson, "-i", item, destination])
+
+
+def unZipFile(fileName, sourceFilePath):
+
+    with ZipFile(sourceFilePath + "/" + fileName, 'r') as zipObj:
+        zipObj.extractall(sourceFilePath + "/temp/")
+
+    os.remove(sourceFilePath + "/" + fileName)
 
 
 def getHandleId(record):
@@ -252,7 +261,7 @@ def saveToTargetFile(fileName, content, path):
         file.write(content)
 
 
-def createTarFile(fileName, sourceFilePath, targetFilePath, title):
+def createTarFile(fileName, sourceFilePath, targetFilePath):
 
     allItem = os.listdir(sourceFilePath)
     with tarfile.open(os.path.join(targetFilePath, fileName), 'w:gz') as tar:
@@ -318,15 +327,23 @@ if __name__ == "__main__":
         title = getValueFromField(record, "title")
         desc = getValueFromField(record, "description")
         identifier = getHandleId(record.getField("identifier"))
+        dspaceExportFileName = identifier.replace("/", "-") + ".zip"
         bagitFileName = identifier.replace("/", "-") + ".tar"
-
         logging.info(
             "Handle %s: Start export handle file and create APTrust bagit",
             identifier)
         exportAipFromDSpaceToStorageFolder(
             identifier,
             configData)
-        if os.path.exists(export_location + bagitFileName):
+        if os.path.exists(export_location + dspaceExportFileName):
+            unZipFile(dspaceExportFileName, export_location)
+            createTarFile(
+                bagitFileName,
+                export_location +
+                "/temp/",
+                export_location)
+            cleanFolder(export_location + "/temp/")
+            os.rmdir(export_location + "/temp/")
             noid = getNoidFromDB(conn, identifier, noid_template)
             fileCount = [1, 1]
             bagitInfo = createBagitInfo(configData, noid, fileCount)
@@ -339,8 +356,7 @@ if __name__ == "__main__":
             createTarFile(
                 bagitFileName,
                 export_location,
-                storage_location,
-                bagitFileName)
+                storage_location)
             uploadFileToS3(
                 storage_location + bagitFileName,
                 configData["s3"]["bucket_name"], bagitFileName)
@@ -351,7 +367,7 @@ if __name__ == "__main__":
                 "Handle %s: APTrust bagit uploaded to s3",
                 identifier)
         else:
-            logging.info("Handle %s file not found", bagitFileName)
+            logging.info("Handle %s file not found", dspaceExportFileName)
 
     conn.close()
 
