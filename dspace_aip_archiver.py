@@ -82,7 +82,8 @@ def getOAIRecordsFromDSpace(configData):
         registry.registerReader('oai_dc', oai_dc_reader)
         client = Client(configData["dspace"]["OAI_URL"], registry)
         from_date = getDateFromDay(configData["dspace"]["DAYS"])
-        records = client.listRecords(metadataPrefix="oai_dc", from_=from_date)
+        until_date = getDateFromDay(configData["dspace"]["UNTIL"])
+        records = client.listRecords(metadataPrefix="oai_dc",from_=from_date,until=until_date)
     except Exception as e:
         print(e)
 
@@ -324,48 +325,53 @@ if __name__ == "__main__":
     checksum = ["md5", "sha256"]
 
     for record in records:
-        title = getValueFromField(record, "title")
-        desc = getValueFromField(record, "description")
-        identifier = getHandleId(record.getField("identifier"))
-        dspaceExportFileName = identifier.replace("/", "-") + ".zip"
-        bagitFileName = identifier.replace("/", "-") + ".tar"
-        logging.info(
-            "Handle %s: Start export handle file and create APTrust bagit",
-            identifier)
-        exportAipFromDSpaceToStorageFolder(
-            identifier,
-            configData)
-        if os.path.exists(export_location + dspaceExportFileName):
-            unZipFile(dspaceExportFileName, export_location)
-            createTarFile(
-                bagitFileName,
-                export_location +
-                "/temp/",
-                export_location)
-            cleanFolder(export_location + "/temp/")
-            os.rmdir(export_location + "/temp/")
-            noid = getNoidFromDB(conn, identifier, noid_template)
-            fileCount = [1, 1]
-            bagitInfo = createBagitInfo(configData, noid, fileCount)
-            aptrustInfo = createAPTrustInfo(configData, title, desc)
-            createBagit(export_location, bagitInfo, checksum)
-            saveToTargetFile(
-                "aptrust-info.txt",
-                aptrustInfo,
-                export_location)
-            createTarFile(
-                bagitFileName,
-                export_location,
-                storage_location)
-            uploadFileToS3(
-                storage_location + bagitFileName,
-                configData["s3"]["bucket_name"], bagitFileName)
-            updateHandleModifyDate(conn, identifier)
-            cleanFolder(export_location)
-            cleanFolder(storage_location)
+        try:
+            title = getValueFromField(record, "title")
+            desc = getValueFromField(record, "description")
+            identifier = getHandleId(record.getField("identifier"))
+            dspaceExportFileName = identifier.replace("/", "-") + ".zip"
+            bagitFileName = identifier.replace("/", "-") + ".tar"
             logging.info(
-                "Handle %s: APTrust bagit uploaded to s3",
+                "Handle %s: Start export handle file and create APTrust bagit",
                 identifier)
+            exportAipFromDSpaceToStorageFolder(
+                identifier,
+                configData)
+            if os.path.exists(export_location + dspaceExportFileName):
+                unZipFile(dspaceExportFileName, export_location)
+                createTarFile(
+                    bagitFileName,
+                    export_location +
+                    "/temp/",
+                    export_location)
+                cleanFolder(export_location + "/temp/")
+                os.rmdir(export_location + "/temp/")
+                noid = getNoidFromDB(conn, identifier, noid_template)
+                fileCount = [1, 1]
+                bagitInfo = createBagitInfo(configData, noid, fileCount)
+                aptrustInfo = createAPTrustInfo(configData, title, desc)
+                createBagit(export_location, bagitInfo, checksum)
+                saveToTargetFile(
+                    "aptrust-info.txt",
+                    aptrustInfo,
+                    export_location)
+                createTarFile(
+                    bagitFileName,
+                    export_location,
+                    storage_location)
+                uploadFileToS3(
+                    storage_location + bagitFileName,
+                    configData["s3"]["bucket_name"], configData["s3"]["folder_name"] + bagitFileName)
+                updateHandleModifyDate(conn, identifier)
+                cleanFolder(export_location)
+                cleanFolder(storage_location)
+                logging.info(
+                    "Handle %s: APTrust bagit exported to storage",
+                    identifier)
+        except Exception as e:
+            print(e)
+            logging.exception(e)
+            continue
         else:
             logging.info("Handle %s file not found", dspaceExportFileName)
 
