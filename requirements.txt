@@ -7,6 +7,6 @@ cryptography
 noid-mint
 nose
 pyoai
-pytest==4.3.0
+pytest==9.0.3
 pytest-cov
 pyyaml
